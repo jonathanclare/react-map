@@ -63,10 +63,10 @@ export default class RasterOverlay
     	};
     	const overlay = new Overlay(map);
     }
-    setRaster(raster) 
+    setRaster(rasterCanvas) 
     {
-    	this.raster = raster;
-    	// use getImage method from raster class to draw it.
+    	this.rasterCanvas = rasterCanvas;
+    	// use getImage method from raster class to draw it or raster canvas.
   	}
     hide() 
     {
