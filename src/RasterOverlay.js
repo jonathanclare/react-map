@@ -1,6 +1,7 @@
+/* global google */
 export default class RasterOverlay
 {
-    constructor(gMaps, map, raster) 
+    constructor(map, raster) 
     {
     	var me = this;
 
@@ -9,13 +10,13 @@ export default class RasterOverlay
 	    this._canvas.style.position = 'absolute';
 	    this._context = this._canvas.getContext('2d');
 
-      	const bounds = new gMaps.LatLngBounds(
-            new gMaps.LatLng(62.281819, -150.287132),
-            new gMaps.LatLng(62.400471, -150.005608));
+      	const bounds = new google.maps.LatLngBounds(
+            new google.maps.LatLng(62.281819, -150.287132),
+            new google.maps.LatLng(62.400471, -150.005608));
 
 	    // Overlay creation.
     	const Overlay = function (map) {this.setMap(map);}
-    	Overlay.prototype = new gMaps.OverlayView(); 
+    	Overlay.prototype = new google.maps.OverlayView(); 
     	Overlay.prototype.onAdd = function () 
     	{
     		console.log('onAdd');
@@ -61,7 +62,7 @@ export default class RasterOverlay
 		    me._canvas.parentNode.removeChild(me._canvas);
 		    me._canvas = null;
     	};
-    	const overlay = new Overlay(map);
+    	this.overlay = new Overlay(map);
     }
     setRaster(rasterCanvas) 
     {

@@ -1,25 +1,25 @@
 import GoogleMapsLoader from './GoogleMapsLoader';
 import ElevationService from './ElevationService';
 
-test('expect elevation for (-34, 151) to be close to 81.74104309082031', () => 
+test('expect elevation not to crash', () => 
 {
 	let g = new GoogleMapsLoader();
-	g.load()
-	.then((gMaps) => 
+	g.load().then(() => 
 	{
-		let es = new ElevationService(gMaps);
-		es.getElevationForLocations([new gMaps.LatLng(-34, 151)])
+		let elevator = new ElevationService(google.maps);
+
+		const gBounds = new google.maps.LatLngBounds(
+            new google.maps.LatLng(62.281819, -150.287132),
+            new google.maps.LatLng(62.400471, -150.005608));
+
+		elevator.getElevationForBounds(gBounds)
 		.then((results) => 
 		{
-	  		expect(results[0].elevation).toBeCloseTo(81); // 81.74104309082031
+
 		})
 		.catch((err) => 
 		{
-			console.log('error: ', err.message);
+			console.log('error: ', err);
 		});
-	})
-	.catch((err) => 
-	{
-		console.log('error: ', err.message);
 	});
 });

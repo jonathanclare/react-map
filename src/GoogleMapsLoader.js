@@ -1,4 +1,3 @@
-/* global google */
 export default class GoogleMapsLoader 
 {
     constructor({key, client, v, region, language, libraries=[]} = {}) 
@@ -25,7 +24,7 @@ export default class GoogleMapsLoader
     {
         return new Promise((resolve, reject) => 
         {
-			window.initMap = () => resolve(google.maps);
+			window.initMap = () => resolve();
 
 			const protocol = window.location.protocol === 'file:' ? 'http:' : window.location.protocol;
 

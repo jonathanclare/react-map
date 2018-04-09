@@ -1,60 +1,52 @@
+/* global google */
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import GoogleMapsLoader from './GoogleMapsLoader';
 import RasterOverlay from './RasterOverlay';
+import RectangleControl  from './RectangleControl'; 
+import ElevationService  from './ElevationService'; 
 import registerServiceWorker from './registerServiceWorker';
 
-
-let g = new GoogleMapsLoader({key: 'AIzaSyABGvJPIPG0O1qsBjVbFYpx4bp_ShWpM98', libraries: ['drawing']});
-g.load()
-.then((gMaps) => 
+const g = new GoogleMapsLoader({key: 'AIzaSyABGvJPIPG0O1qsBjVbFYpx4bp_ShWpM98', libraries: ['drawing']});
+g.load().then(() => 
 {
 	// Create map.
-    var map = new gMaps.Map(document.getElementById('map'), 
+    const map = new google.maps.Map(document.getElementById('map'), 
     {
 		zoom: 11,
 		center: {lat: 62.323907, lng: -150.109291},
     });
 
     // Overlay to draw raster onto.
-    var overlay = new RasterOverlay(gMaps, map);
+    const rOverlay = new RasterOverlay(map);
+    const elevator = new ElevationService();
 
-	/*R.prototype = new gMaps.OverlayView(); 
-	function R(map) {this.setMap(map);}
-	R.prototype.onAdd = function () {console.log('onAdd')}
-	R.prototype.draw = function () {console.log('draw')}
-	R.prototype.onRemove = function () {console.log('onRemove')}
-	var s = new R(map);*/
-
-    // Add drawing manager.
-    var drawingManager = new gMaps.drawing.DrawingManager(
+    const rectCtrl = new RectangleControl(
     {
-        drawingMode: gMaps.drawing.OverlayType.RECTANGLE,
-        drawingControl: true,
-        drawingControlOptions: 
+        fillColor: '#000000',
+        fillOpacity: 0,
+        strokeColor: '#000000',
+        strokeWeight: 1,
+        onBoundsChanged: gBounds =>
         {
-            position: gMaps.ControlPosition.TOP_CENTER,
-            drawingModes: ['rectangle']
-        },
-        rectangleOptions: 
-        {
-            fillColor: '#0000ff',
-            fillOpacity: 0.1,
-            strokeColor: '#0000ff',
-            strokeWeight: 1,
-            clickable: true,
-            draggable: true,
-            editable: true,
-            zIndex: 1
+            elevator.getElevationForBounds(gBounds)
+            .then((results) => 
+            {
+
+            })
+            .catch((err) => 
+            {
+                console.log('error: ', err);
+            })
+            .then(() => 
+            {
+                // Clear the old canvas whatever happens
+            });
         }
     });
-    drawingManager.setMap(map);
-})
-.catch((err) => 
-{
-	console.log('error: ', err.message);
+    rectCtrl.attach(map);
 });
 
 ReactDOM.render(<App />, document.getElementById('root'));
