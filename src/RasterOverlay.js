@@ -6,82 +6,69 @@ export default class RasterOverlay
     	var me = this;
 
 	    // Create the canvas element.
-	    this._canvas = document.createElement('canvas');
-	    this._canvas.style.position = 'absolute';
-	    this._context = this._canvas.getContext('2d');
-
-      	const bounds = new google.maps.LatLngBounds(
-            new google.maps.LatLng(62.281819, -150.287132),
-            new google.maps.LatLng(62.400471, -150.005608));
+	    this.canvas = document.createElement('canvas');
+	    this.canvas.style.position = 'absolute';
+	    this.context = this.canvas.getContext('2d');
 
 	    // Overlay creation.
     	const Overlay = function (map) {this.setMap(map);}
     	Overlay.prototype = new google.maps.OverlayView(); 
     	Overlay.prototype.onAdd = function () 
     	{
-    		console.log('onAdd');
-
-		    // Add the element to the overlay pane.
 		    const panes = this.getPanes();
-		    panes.overlayLayer.appendChild(me._canvas);
+		    panes.overlayLayer.appendChild(me.canvas);
     	};
     	Overlay.prototype.draw = function () 
     	{
     		console.log('draw');
+            if (me.gBounds !== undefined)
+            {
+                // Map Coords.
+                const sw = me.gBounds.getSouthWest();
+                const ne = me.gBounds.getNorthEast();
 
-		    // Map Coords.
-		    var sw = bounds.getSouthWest();
-		    var ne = bounds.getNorthEast();
-		    var n  = ne.lat();   
-		    var e  = ne.lng();
-		    var s  = sw.lat();   
-		    var w  = sw.lng();
+                // Pixel Coords.
+                const overlayProjection = this.getProjection();
+                const psw = overlayProjection.fromLatLngToDivPixel(sw);
+                const pne = overlayProjection.fromLatLngToDivPixel(ne);
+                const px = psw.x;
+                const py = pne.y;
+                const pw = (pne.x - psw.x);
+                const ph = (psw.y - pne.y);
 
-		    // Pixel Coords.
-		    var overlayProjection = this.getProjection();
-		    var psw = overlayProjection.fromLatLngToDivPixel(sw);
-		    var pne = overlayProjection.fromLatLngToDivPixel(ne);
-		    var px = psw.x;
-		    var py = pne.y;
-		    var pw = (pne.x - psw.x);
-		    var ph = (psw.y - pne.y);
-
-		    // Resize the canvas.
-		    me._canvas.style.left = px + 'px';
-		    me._canvas.style.top = py + 'px';
-		    me._canvas.width = pw;
-		    me._canvas.height = ph;
-
-			me._context.rect(0,0,pw,ph);
-			me._context.stroke();
+                // Resize the canvas.
+                me.canvas.style.left = px + 'px';
+                me.canvas.style.top = py + 'px';
+                me.canvas.width = pw;
+                me.canvas.height = ph;
+            }
     	};
     	Overlay.prototype.onRemove = function () 
     	{
-		    console.log('onRemove');
-
-		    me._canvas.parentNode.removeChild(me._canvas);
-		    me._canvas = null;
+		    me.canvas.parentNode.removeChild(me.canvas);
+		    me.canvas = null;
     	};
+
     	this.overlay = new Overlay(map);
     }
-    setRaster(rasterCanvas) 
+    setBounds(gBounds) 
     {
-    	this.rasterCanvas = rasterCanvas;
-    	// use getImage method from raster class to draw it or raster canvas.
+        this.gBounds = gBounds;
+        this.overlay.draw();
   	}
     hide() 
     {
-  		if (this._canvas) this._canvas.style.visibility = 'hidden';
+  		if (this.canvas) this.canvas.style.visibility = 'hidden';
   	}
     show() 
     {
-  		if (this._canvas) this._canvas.style.visibility = 'visible';
+  		if (this.canvas) this.canvas.style.visibility = 'visible';
   	}
     toggle() 
     {
-  		if (this._canvas) 
+  		if (this.canvas) 
   		{
-		    if (this._canvas.style.visibility === 'hidden')  this.show();
+		    if (this.canvas.style.visibility === 'hidden')  this.show();
 		    else this.hide();
   		}
   	}

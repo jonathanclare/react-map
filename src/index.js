@@ -1,4 +1,5 @@
 /* global google */
+/* global kriging */
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
@@ -7,6 +8,7 @@ import GoogleMapsLoader from './GoogleMapsLoader';
 import RasterOverlay from './RasterOverlay';
 import RectangleControl  from './RectangleControl'; 
 import ElevationService  from './ElevationService'; 
+import * as Color from './Color' ;
 import registerServiceWorker from './registerServiceWorker';
 
 const g = new GoogleMapsLoader({key: 'AIzaSyABGvJPIPG0O1qsBjVbFYpx4bp_ShWpM98', libraries: ['drawing']});
@@ -31,18 +33,34 @@ g.load().then(() =>
         strokeWeight: 1,
         onBoundsChanged: gBounds =>
         {
-            elevator.getElevationForBounds(gBounds)
-            .then((results) => 
+            rOverlay.setBounds(gBounds);
+            elevator.getDEMForBounds(gBounds, rOverlay.overlay.getProjection())
+            .then((raster) => 
             {
-                console.log(results);
+                const nRows = raster.values.length;
+                const nCols = raster.values[0].length;
+                const imgData = rOverlay.context.createImageData(nCols, nRows);
+
+                let index = 0;
+                for (let row = 0; row < nRows; row++) 
+                {
+                    for (let col = 0; col < nCols; col++) 
+                    {
+                        const z = raster.values[row][col];
+                        const f = (raster.max - z) / raster.range;
+                        const o = Color.getInterpolatedColor('#ff0000', '#00ff00', f);
+                        imgData.data[index] = o.r; 
+                        imgData.data[index+1] = o.g;  
+                        imgData.data[index+2] = o.b;  
+                        imgData.data[index+3] = 0.8 * 255; 
+                        index += 4;
+                    }
+                }
+                rOverlay.context.putImageData(imgData, 0, 0);
             })
             .catch((err) => 
             {
                 console.log('error: ', err);
-            })
-            .then(() => 
-            {
-                // Clear the old canvas whatever happens
             });
         }
     });

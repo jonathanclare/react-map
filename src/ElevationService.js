@@ -1,5 +1,5 @@
 /* global google */
-import {isNumber} from './utils';
+/* global kriging */
 export default class ElevationService 
 {
     /*
@@ -13,9 +13,9 @@ export default class ElevationService
     {
         this.elevator = new google.maps.ElevationService();
     }
-    getElevationForBounds(gBounds, quotaLimit = 512) 
+    getElevationForBounds(gBounds, nPoints = 512) 
     {
-        quotaLimit = Math.max(quotaLimit, 512);
+        const quotaLimit = Math.max(nPoints, 512);
 
         const sw = gBounds.getSouthWest();
         const ne = gBounds.getNorthEast();
@@ -35,7 +35,7 @@ export default class ElevationService
             for (let j = 0; j < noPointsAlongSide; j++) 
             {
                 lng = w + (incrLng * j);
-                if (isNumber(lat) && isNumber(lng)) arrLatLng.push(new google.maps.LatLng(lat, lng));
+                arrLatLng.push(new google.maps.LatLng(lat, lng));
             }
         }
 
@@ -57,7 +57,72 @@ export default class ElevationService
                     else reject('No results found');
                 } 
                 else reject(status);
-            })
-        })
+            });
+        });
+    }
+    getDEMForBounds(gBounds, projection) 
+    {
+        return this.getElevationForBounds(gBounds)
+        .then((results) => 
+        {
+            return new Promise((resolve, reject) => 
+            {
+                const raster = this.getDEMForElevationResults(gBounds, projection, results);
+                resolve(raster);
+            });
+        });
+    }
+    getDEMForElevationResults(gBounds, projection, results) 
+    {
+        // Train kriging model.
+        const arrX = [], arrY = [], arrZ = [];
+        for (const o of results)
+        { 
+            arrX.push(o.location.lng());
+            arrY.push(o.location.lat());
+            arrZ.push(o.elevation);
+        }
+        const model = "spherical", sigma2 = 0, alpha = 100;
+        const variogram = kriging.train(arrZ, arrX, arrY, model, sigma2, alpha);
+
+        // Calculate min, max and range of elevation.
+        const minElevation = Math.min.apply(Math,results.map(function(o){return o.elevation;}));
+        const maxElevation = Math.max.apply(Math,results.map(function(o){return o.elevation;}));
+        const rangeElevation = maxElevation - minElevation;
+
+        // Map Coords.
+        const sw = gBounds.getSouthWest();
+        const ne = gBounds.getNorthEast();
+        const n  = ne.lat();   
+        const e  = ne.lng();
+        const s  = sw.lat();   
+        const w  = sw.lng();
+        const rw  = Math.abs(e - w);
+        const rh  = Math.abs(n - s);
+
+        // Pixel Coords.
+        const psw = projection.fromLatLngToDivPixel(sw);
+        const pne = projection.fromLatLngToDivPixel(ne);
+        const px = psw.x;
+        const py = pne.y;
+        const pw = (pne.x - psw.x);
+        const ph = (psw.y - pne.y);
+
+        // Build raster.
+        const raster = [];
+        let xNew = w, yNew = n;
+        for (let i = 0; i < ph; i++) 
+        {
+            raster.push([]);
+            for (let j = 0; j < pw; j++) 
+            {
+                raster[i][j] = kriging.predict(xNew, yNew, variogram);
+                xNew += (rw / pw);
+            }
+            yNew -= (rh / ph);
+            xNew = w;
+        }
+
+        return {min:minElevation, max:maxElevation, range:rangeElevation, values:raster};
     }
 }
