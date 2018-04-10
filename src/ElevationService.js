@@ -13,9 +13,10 @@ export default class ElevationService
     {
         this.elevator = new google.maps.ElevationService();
     }
-    getElevationForBounds(gBounds) 
+    getElevationForBounds(gBounds, quotaLimit = 512) 
     {
-        // Map Coords.
+        quotaLimit = Math.max(quotaLimit, 512);
+
         const sw = gBounds.getSouthWest();
         const ne = gBounds.getNorthEast();
         const n  = ne.lat();   
@@ -23,13 +24,10 @@ export default class ElevationService
         const s  = sw.lat();   
         const w  = sw.lng();
 
-        // Create evenly spread points grid.
-        const quotaLimit = 512;
         const noPointsAlongSide = Math.floor(Math.sqrt(quotaLimit));
         const incrLat = (n - s) / (noPointsAlongSide - 1);
         const incrLng = (e - w) / (noPointsAlongSide - 1);
         const arrLatLng = [];
-
         let lat, lng;
         for (let i = 0; i < noPointsAlongSide; i++) 
         {
@@ -41,6 +39,10 @@ export default class ElevationService
             }
         }
 
+        return this.getElevationForLocations(arrLatLng);
+    }
+    getElevationForLocations(arrLatLng) 
+    {
         return new Promise((resolve, reject) => 
         {
             this.elevator.getElevationForLocations(

@@ -34,7 +34,7 @@ g.load().then(() =>
             elevator.getElevationForBounds(gBounds)
             .then((results) => 
             {
-
+                console.log(results);
             })
             .catch((err) => 
             {
