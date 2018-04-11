@@ -353,7 +353,7 @@ const getInterpolatedColor = (c1, c2, f) =>
  * @since 0.1.0
  * @return {object} An object containing the rgba color values {r:255, g:255, b:255, a:1}.
  */
-const getRandomColor = function()
+const getRandomColor = () =>
 {
     const r = Math.round(Math.random() * 255);
     const g = Math.round(Math.random() * 255);
@@ -361,4 +361,36 @@ const getRandomColor = function()
     return {r:r, g:g, b:b, a:1};
 };
 
-export {isCssColor, toRgba, toRgbaString, toHex, toHsv, getInterpolatedColor, getRandomColor};
+/** 
+ * Gets the color corresponding to the interpolation fraction.
+ * 
+ * @since 0.1.0
+ * @param {Array} arrColors The array of colors.
+ * @param {Number} f A fraction between 0 and 1 controlling the interpolation.
+ * @return {object} An object containing the rgba color values {r:255, g:255, b:255, a:1}.
+ */
+const getColorAt = function(arrColors, f)
+{
+    var n = arrColors.length - 1;
+    var r = 1/n;
+    if ((n <= 0) || (f <= 0)) return toRgba(arrColors[0]);
+    else if (f >= 1) return toRgba(arrColors[n]);
+    else
+    {
+        const fSize = 1 / n;
+        let ratio = 0;
+        for (let i = 0; i < n; i++)
+        {
+            const r1 = ratio, r2 = r1 + fSize;
+            if ((f >= r1) && (f <= r2))
+            {
+                const c1 = arrColors[i], c2 = arrColors[i+1];
+                const adjustedF = (f - r1) / (r2 - r1);
+                return getInterpolatedColor(c1, c2, adjustedF);
+            }
+            ratio += parseFloat(fSize);
+        }
+    }
+};
+
+export {isCssColor, toRgba, toRgbaString, toHex, toHsv, getInterpolatedColor, getRandomColor, getColorAt};

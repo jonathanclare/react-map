@@ -1,5 +1,6 @@
 /* global google */
 /* global kriging */
+import Raster from './Raster';
 export default class ElevationService 
 {
     /*
@@ -12,6 +13,25 @@ export default class ElevationService
     constructor() 
     {
         this.elevator = new google.maps.ElevationService();
+    }
+    getElevationForLocations(arrLatLng) 
+    {
+        return new Promise((resolve, reject) => 
+        {
+            this.elevator.getElevationForLocations(
+            {
+                'locations': arrLatLng
+            }, 
+            (results, status) =>
+            {
+                if (status === 'OK') 
+                {
+                    if (results[0]) resolve(results);
+                    else reject('No results found');
+                } 
+                else reject(status);
+            });
+        });
     }
     getElevationForBounds(gBounds, nPoints = 512) 
     {
@@ -41,38 +61,7 @@ export default class ElevationService
 
         return this.getElevationForLocations(arrLatLng);
     }
-    getElevationForLocations(arrLatLng) 
-    {
-        return new Promise((resolve, reject) => 
-        {
-            this.elevator.getElevationForLocations(
-            {
-                'locations': arrLatLng
-            }, 
-            (results, status) =>
-            {
-                if (status === 'OK') 
-                {
-                    if (results[0]) resolve(results);
-                    else reject('No results found');
-                } 
-                else reject(status);
-            });
-        });
-    }
-    getDEMForBounds(gBounds, projection) 
-    {
-        return this.getElevationForBounds(gBounds)
-        .then((results) => 
-        {
-            return new Promise((resolve, reject) => 
-            {
-                const raster = this.getDEMForElevationResults(gBounds, projection, results);
-                resolve(raster);
-            });
-        });
-    }
-    getDEMForElevationResults(gBounds, projection, results) 
+    getRasterForElevationResults(gBounds, projection, results) 
     {
         // Train kriging model.
         const arrX = [], arrY = [], arrZ = [];
@@ -84,11 +73,6 @@ export default class ElevationService
         }
         const model = "spherical", sigma2 = 0, alpha = 100;
         const variogram = kriging.train(arrZ, arrX, arrY, model, sigma2, alpha);
-
-        // Calculate min, max and range of elevation.
-        const minElevation = Math.min.apply(Math,results.map(function(o){return o.elevation;}));
-        const maxElevation = Math.max.apply(Math,results.map(function(o){return o.elevation;}));
-        const rangeElevation = maxElevation - minElevation;
 
         // Map Coords.
         const sw = gBounds.getSouthWest();
@@ -103,82 +87,36 @@ export default class ElevationService
         // Pixel Coords.
         const psw = projection.fromLatLngToDivPixel(sw);
         const pne = projection.fromLatLngToDivPixel(ne);
-        const px = psw.x;
-        const py = pne.y;
-        const pw = (pne.x - psw.x);
-        const ph = (psw.y - pne.y);
-        const xRes = realWidth / pw;
-        const yRes = realHeight / ph;
+        const nCols = (pne.x - psw.x);
+        const nRows = (psw.y - pne.y);
+        const xRes = realWidth / nCols;
+        const yRes = realHeight / nRows;
 
-        // Build raster.
-        const arrRast = [];
+        const values = [];
         let xNew = w, yNew = n;
-        for (let i = 0; i < ph; i++) 
+        for (let row = 0; row < nRows; row++) 
         {
-            arrRast.push([]);
-            for (let j = 0; j < pw; j++) 
+            for (let col = 0; col < nCols; col++) 
             {
-                arrRast[i][j] = kriging.predict(xNew, yNew, variogram);
+                const z = kriging.predict(xNew, yNew, variogram);
+                values.push(z);
                 xNew += xRes;
             }
             yNew -= yRes;
             xNew = w;
         }
 
-        // Iterator.
-        /*class Iterable
+        return new Raster({nRows:nRows, nCols:nCols, west:w, south:s, xRes:xRes, yRes:yRes, values:values});
+    }
+    getRasterForBounds(gBounds, projection) 
+    {
+        return this.getElevationForBounds(gBounds)
+        .then((results) => 
         {
-            constructor(arr)
+            return new Promise((resolve, reject) => 
             {
-                this.arr = [...arr];
-                this.row = 0;
-                this.col = -1;
-                this.nRows = this.arr.length;
-                this.nCols = this.arr[0].length;
-            }
-            [Symbol.iterator]() 
-            {
-                return this;
-            }
-            next() 
-            {
-                this.col++;
-                if (this.col >= this.nCols) 
-                {
-                    this.row++;
-                    this.col = 0;
-                }
-
-                if (this.row >=  this.nRows)  
-                    return {done: true};
-                else
-                    return {value: this.arr[this.row][this.col]};
-            }
-        }*/
-
-        // Generator.
-        class Iterable
-        {
-            constructor(arr)
-            {
-                this.arr = [...arr];
-            }
-            [Symbol.iterator] = function*() 
-            {
-                const nRows = this.arr.length;
-                const nCols = this.arr[0].length;
-                for (let row = 0; row < nRows; row++) 
-                {
-                    for (let col = 0; col < nCols; col++) 
-                    {
-                        yield this.arr[row][col];
-                    }
-                }
-            }
-        }
-
-        let iterableRaster = new Iterable(arrRast);
-
-        return {cols:arrRast[0].length, rows:arrRast.length,  min:minElevation, max:maxElevation, range:rangeElevation, values:iterableRaster};
+                resolve(this.getRasterForElevationResults(gBounds, projection, results));
+            });
+        });
     }
 }

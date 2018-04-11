@@ -13,16 +13,23 @@ export default class Raster
 		if (this.nRows !== undefined && this.nCols !== undefined && values.length > 0)
 		{
     		let arrRaster = [];
-	        let index = -1;
+	        let index = 0;
+    		this.min = Infinity;
+    		this.max = -Infinity;
 	        for (let row = 0; row < this.nRows; row++) 
 	        {
 	            arrRaster.push([]);
 	            for (let col = 0; col < this.nCols; col++) 
 	            {
-	                arrRaster[i][j] = values[index++];
+	            	const value = values[index];
+	                arrRaster[row][col] = value;
+		    		this.min = Math.min(this.min, value);
+		    		this.max = Math.max(this.max, value);
+	                index++;
 	            }
 	        }
-    		this.raster = new Iterable(values);
+    		this.rast = new Iterable(arrRaster);
+    		this.range = this.max - this.min;
 		}
 
         if (this.west !== undefined && this.xRes !== undefined) this.east =  this.west + (this.xRes * this.nCols);
