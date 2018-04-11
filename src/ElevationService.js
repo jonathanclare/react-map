@@ -97,8 +97,8 @@ export default class ElevationService
         const e  = ne.lng();
         const s  = sw.lat();   
         const w  = sw.lng();
-        const rw  = Math.abs(e - w);
-        const rh  = Math.abs(n - s);
+        const realWidth  = Math.abs(e - w);
+        const realHeight  = Math.abs(n - s);
 
         // Pixel Coords.
         const psw = projection.fromLatLngToDivPixel(sw);
@@ -107,22 +107,78 @@ export default class ElevationService
         const py = pne.y;
         const pw = (pne.x - psw.x);
         const ph = (psw.y - pne.y);
+        const xRes = realWidth / pw;
+        const yRes = realHeight / ph;
 
         // Build raster.
-        const raster = [];
+        const arrRast = [];
         let xNew = w, yNew = n;
         for (let i = 0; i < ph; i++) 
         {
-            raster.push([]);
+            arrRast.push([]);
             for (let j = 0; j < pw; j++) 
             {
-                raster[i][j] = kriging.predict(xNew, yNew, variogram);
-                xNew += (rw / pw);
+                arrRast[i][j] = kriging.predict(xNew, yNew, variogram);
+                xNew += xRes;
             }
-            yNew -= (rh / ph);
+            yNew -= yRes;
             xNew = w;
         }
 
-        return {min:minElevation, max:maxElevation, range:rangeElevation, values:raster};
+        // Iterator.
+        /*class Iterable
+        {
+            constructor(arr)
+            {
+                this.arr = [...arr];
+                this.row = 0;
+                this.col = -1;
+                this.nRows = this.arr.length;
+                this.nCols = this.arr[0].length;
+            }
+            [Symbol.iterator]() 
+            {
+                return this;
+            }
+            next() 
+            {
+                this.col++;
+                if (this.col >= this.nCols) 
+                {
+                    this.row++;
+                    this.col = 0;
+                }
+
+                if (this.row >=  this.nRows)  
+                    return {done: true};
+                else
+                    return {value: this.arr[this.row][this.col]};
+            }
+        }*/
+
+        // Generator.
+        class Iterable
+        {
+            constructor(arr)
+            {
+                this.arr = [...arr];
+            }
+            [Symbol.iterator] = function*() 
+            {
+                const nRows = this.arr.length;
+                const nCols = this.arr[0].length;
+                for (let row = 0; row < nRows; row++) 
+                {
+                    for (let col = 0; col < nCols; col++) 
+                    {
+                        yield this.arr[row][col];
+                    }
+                }
+            }
+        }
+
+        let iterableRaster = new Iterable(arrRast);
+
+        return {cols:arrRast[0].length, rows:arrRast.length,  min:minElevation, max:maxElevation, range:rangeElevation, values:iterableRaster};
     }
 }

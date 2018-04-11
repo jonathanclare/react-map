@@ -37,24 +37,17 @@ g.load().then(() =>
             elevator.getDEMForBounds(gBounds, rOverlay.overlay.getProjection())
             .then((raster) => 
             {
-                const nRows = raster.values.length;
-                const nCols = raster.values[0].length;
-                const imgData = rOverlay.context.createImageData(nCols, nRows);
-
+                const imgData = rOverlay.context.createImageData(raster.cols, raster.rows);
                 let index = 0;
-                for (let row = 0; row < nRows; row++) 
+                for (let z of raster.values)
                 {
-                    for (let col = 0; col < nCols; col++) 
-                    {
-                        const z = raster.values[row][col];
-                        const f = (raster.max - z) / raster.range;
-                        const o = Color.getInterpolatedColor('#ff0000', '#00ff00', f);
-                        imgData.data[index] = o.r; 
-                        imgData.data[index+1] = o.g;  
-                        imgData.data[index+2] = o.b;  
-                        imgData.data[index+3] = 0.8 * 255; 
-                        index += 4;
-                    }
+                    const f = (raster.max - z) / raster.range;
+                    const o = Color.getInterpolatedColor('#ff0000', '#00ff00', f);
+                    imgData.data[index] = o.r; 
+                    imgData.data[index+1] = o.g;  
+                    imgData.data[index+2] = o.b;  
+                    imgData.data[index+3] = 0.8 * 255; 
+                    index += 4;
                 }
                 rOverlay.context.putImageData(imgData, 0, 0);
             })
