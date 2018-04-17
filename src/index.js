@@ -5,9 +5,11 @@ import './index.css';
 import App from './App';
 import GoogleMapsLoader from './GoogleMapsLoader';
 import RasterOverlay from './RasterOverlay';
+import * as RasterAlgebra from './RasterAlgebra';
 import RectangleControl  from './RectangleControl'; 
 import ElevationService  from './ElevationService'; 
 import * as Color from './Color' ;
+import {isNumber} from './utils' ;
 import registerServiceWorker from './registerServiceWorker';
 
 const g = new GoogleMapsLoader({key: 'AIzaSyABGvJPIPG0O1qsBjVbFYpx4bp_ShWpM98', libraries: ['drawing']});
@@ -46,20 +48,23 @@ g.load().then(() =>
         elevator.getRasterForBounds(gBounds, overlay.overlay.getProjection())
         .then((raster) => 
         {
-            const colorRamp = ['#f0ece9', '#baa191', '#fcc46d', '#e9d59c', '#5d8a41'];
+           /* const colorRamp = ['#f0ece9', '#baa191', '#fcc46d', '#e9d59c', '#5d8a41'];
             const imgData = overlay.context.createImageData(raster.nCols, raster.nRows);
             let index = 0;
-            for (let z of raster.rast)
+            for (let cell of raster.cells)
             {
-                const f = (raster.max - z) / raster.range;
-                const o = Color.getColorAt(colorRamp, f);
-                imgData.data[index] = o.r; 
-                imgData.data[index+1] = o.g;  
-                imgData.data[index+2] = o.b;  
+                const f = (raster.max - cell.value) / raster.range;
+                const c = Color.getColorAt(colorRamp, f);
+                imgData.data[index] = c.r; 
+                imgData.data[index+1] = c.g;  
+                imgData.data[index+2] = c.b;  
                 imgData.data[index+3] = 0.8 * 255; 
                 index += 4;
             }
-            overlay.context.putImageData(imgData, 0, 0);
+            overlay.context.putImageData(imgData, 0, 0);*/
+
+            hillshade(raster, overlay);
+
         })
         .catch((err) => 
         {
@@ -67,6 +72,24 @@ g.load().then(() =>
         });
     };
 });
+
+const hillshade = (raster, overlay) =>
+{
+    const hillshade = RasterAlgebra.hillshade(raster);
+    const imgData = overlay.context.createImageData(hillshade.nCols, hillshade.nRows);
+    let index = 0;
+    for (let cell of hillshade.cells)
+    {
+        let v = cell.value;
+        if (!isNumber(v)) v = 0;
+        imgData.data[index] = v; 
+        imgData.data[index+1] = v;  
+        imgData.data[index+2] = v;  
+        imgData.data[index+3] = 0.8 * 255; 
+        index += 4;
+    }
+    overlay.context.putImageData(imgData, 0, 0);
+}
 
 //ReactDOM.render(<App />, document.getElementById('root'));
 registerServiceWorker();

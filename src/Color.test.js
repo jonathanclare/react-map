@@ -18,7 +18,7 @@ test('aliceblue rgb value to be {r:240, g:248, b:255, a:1}', () =>
 });
 test('aliceblue hsv value to be {h:208,s:6,v:100}', () => 
 {
-	var c = Color.toHsv(inColor);
+	var c = Color.toHsva(inColor);
 	expect(c.h).toEqual(208);
 	expect(c.s).toEqual(6);
 	expect(c.v).toEqual(100);

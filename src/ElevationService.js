@@ -1,6 +1,7 @@
 /* global google */
 /* global kriging */
 import Raster from './Raster';
+import GoogleMercator from './GoogleMercator';
 export default class ElevationService 
 {
     /*
@@ -75,23 +76,24 @@ export default class ElevationService
         const variogram = kriging.train(arrZ, arrX, arrY, model, sigma2, alpha);
 
         // Map Coords.
-        const sw = gBounds.getSouthWest();
-        const ne = gBounds.getNorthEast();
-        const n  = ne.lat();   
-        const e  = ne.lng();
-        const s  = sw.lat();   
-        const w  = sw.lng();
-        const realWidth  = Math.abs(e - w);
-        const realHeight  = Math.abs(n - s);
+        let sw = gBounds.getSouthWest();
+        let ne = gBounds.getNorthEast();
+        let n  = ne.lat();   
+        let e  = ne.lng();
+        let s  = sw.lat();   
+        let w  = sw.lng();
+        let realWidth  = Math.abs(e - w);
+        let realHeight  = Math.abs(n - s);
 
         // Pixel Coords.
         const psw = projection.fromLatLngToDivPixel(sw);
         const pne = projection.fromLatLngToDivPixel(ne);
         const nCols = (pne.x - psw.x);
         const nRows = (psw.y - pne.y);
-        const xRes = realWidth / nCols;
-        const yRes = realHeight / nRows;
+        let xRes = realWidth / nCols;
+        let yRes = realHeight / nRows;
 
+        // Kriging.
         const values = [];
         let xNew = w, yNew = n;
         for (let row = 0; row < nRows; row++) 
@@ -105,6 +107,17 @@ export default class ElevationService
             yNew -= yRes;
             xNew = w;
         }
+
+        // Use metres for raster definition.
+        const mercator = new GoogleMercator();
+        sw = mercator.toMetres(sw.lat(), sw.lng());
+        ne = mercator.toMetres(ne.lat(), ne.lng());
+        n  = ne.y;   
+        e  = ne.x;
+        s  = sw.y;   
+        w  = sw.x;
+        xRes = Math.abs(e - w) / nCols;
+        yRes = Math.abs(n - s) / nRows;
 
         return new Raster({nRows:nRows, nCols:nCols, west:w, south:s, xRes:xRes, yRes:yRes, values:values});
     }

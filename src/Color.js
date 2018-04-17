@@ -95,7 +95,7 @@ const isCssColor = c =>
  * @param {object} c An object containing the component colors {r:255, g:255, b:255}.
  * @return {boolean} true, if c is an rgba object, otherwise false.
  */
-const isRgbaObject = c => 
+const isRgbObject = c => 
 {
     if (c.hasOwnProperty('r') && c.hasOwnProperty('g') && c.hasOwnProperty('b')) return true; 
     return false;
@@ -144,9 +144,10 @@ const rgbToHex = (r, g, b) => '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toStr
  * @param {number} r The red component.
  * @param {number} g The green component.
  * @param {number} b The blue component.
- * @return {object} An object containing the component colors {h:255, s:255, v:255}.
+ * @param {number} a The alpha component.
+ * @return {object} An object containing the component colors {h:255, s:255, v:255, a:1}.
  */
-const rgbToHsv = (r, g, b) => 
+const rgbaToHsva = (r, g, b, a = 1) => 
 {
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
@@ -163,7 +164,7 @@ const rgbToHsv = (r, g, b) =>
 
     let v = (max / 255) * 100;
 
-    return {h:Math.round(h), s:Math.round(s), v:Math.round(v)};
+    return {h:Math.round(h), s:Math.round(s), v:Math.round(v), a:a};
 }
 
 /** 
@@ -200,59 +201,38 @@ const hexToRgb = hex =>
  * Converts HSV to RGB.
  * 
  * @since 0.1.0
- * @param {object} An object containing the component colors {h:255, s:255, v:255}.
- * @return {object} An object containing the component colors {r:255, g:255, b:255}.
+ * @param {number} h The hue component.
+ * @param {number} s The saturation component.
+ * @param {number} v The value component.
+ * @param {number} a The alpha component.
+ * @return {object} An object containing the component colors {r:255, g:255, b:255, a:1}.
  */
-const hsvToRgb = hsv =>
+const hsvaToRgba = (h, s, v, a = 1) =>
 {
-    let h = hsv.h;
-    const s = hsv.s / 100;
-    const v = (hsv.v / 100) * 255;
+    let hue = h;
+    const sat = s / 100;
+    const val = (v / 100) * 255;
 
-    if (h < 0) {h += 360;}
+    if (hue < 0) {hue += 360;}
 
-    const hi = Math.floor( h / 60 ) % 6;
-    const f = h / 60 - Math.floor( h / 60 );
-    const p = v * (1 - s);
-    const q = v * (1 - f * s);
-    const t = v * (1 - ( 1 - f ) * s );
+    const hi = Math.floor(hue / 60) % 6;
+    const f = hue / 60 - Math.floor(hue / 60);
+    const p = val * (1 - sat);
+    const q = val * (1 - f * sat);
+    const t = val * (1 - (1 - f) * sat);
     let r, g, b;
 
     switch(hi) 
     {
-        case 0: 
-            r = v;
-            g = t;
-            b = p;
-        break;
-        case 1: 
-            r = q;
-            g = v;
-            b = p;
-        break;
-        case 2: 
-            r = p;
-            g = v;
-            b = t;
-        break;
-        case 3: 
-            r = p;
-            g = q;
-            b = v;
-        break;
-        case 4: 
-            r = t;
-            g = p;
-            b = v;
-        break;
-        case 5: 
-            r = v;
-            g = p;
-            b = q;
-        break;
+        case 0: r = val; g = t; b = p; break;
+        case 1: r = q; g = val; b = p; break;
+        case 2: r = p; g = val; b = t; break;
+        case 3: r = p; g = q; b = val; break;
+        case 4: r = t; g = p; b = val; break;
+        case 5: r = val; g = p; b = q; break;
     }
     
-    return {r:r, g:g, b:b};
+    return {r:r, g:g, b:b, a:a};
 };
 
 /** 
@@ -278,11 +258,11 @@ const colorNameToRgb = c =>
  */
 const toRgba = c => 
 {
-    if (isRgbaObject(c)) return c; 
+    if (isRgbObject(c)) return c; 
     else if (isRgb(c)) return rgbaStringToRgba(c); 
     else if (isHex(c)) return hexToRgb(c);
     else if (isColorName(c)) return colorNameToRgb(c);
-    else if (isHsvObject(c)) return hsvToRgb(c);
+    else if (isHsvObject(c)) return hsvaToRgba(c.h, c.s, c.v, c.a);
     return {r:0, g:0, b:0, a:1};
 };
 
@@ -317,34 +297,12 @@ const toHex = c =>
  * 
  * @since 0.1.0
  * @param {string} c The color.
- * @return {object} An object containing the component colors {h:255, s:255, v:255}.
+ * @return {object} An object containing the component colors {h:255, s:255, v:255, a:1}.
  */
-const toHsv = c =>
+const toHsva = c =>
 {
     const o = toRgba(c);
-    return rgbToHsv(o.r, o.g, o.b);
-};
-
-/**
- * Interpolate between two color values by the given mixing proportion.
- * A mixing fraction of 0 will result in c1, a value of 1.0 will result
- * in c2, and value of 0.5 will result in the color mid-way between the
- * two in RGB color space.
- * 
- * @since 0.1.0
- * @param {String} c1 The starting color.
- * @param {String} c2 The target color.
- * @param {Number} f A fraction between 0 and 1 controlling the interpolation.
- * @return {object} An object containing the rgba color values {r:255, g:255, b:255, a:1}.
- */
-const getInterpolatedColor = (c1, c2, f) =>
-{
-    const o1 = toRgba(c1);
-    const o2 = toRgba(c2);
-    const r = o1.r + (f*(o2.r - o1.r));
-    const g = o1.g + (f*(o2.g - o1.g));
-    const b = o1.b + (f*(o2.b - o1.b));
-    return {r:r, g:g, b:b, a:1};
+    return rgbaToHsva(o.r, o.g, o.b);
 };
 
 /** 
@@ -371,12 +329,21 @@ const getRandomColor = () =>
  */
 const getColorAt = function(arrColors, f)
 {
-    var n = arrColors.length - 1;
-    var r = 1/n;
-    if ((n <= 0) || (f <= 0)) return toRgba(arrColors[0]);
-    else if (f >= 1) return toRgba(arrColors[n]);
+    if (f <= 0) return toRgba(arrColors[0]);
+    else if (f >= 1) return toRgba(arrColors[arrColors.length-1]);
+    else if (arrColors.length === 1) return toRgba(arrColors[0]);
+    else if (arrColors.length === 2)
+    {
+        const c1 = toRgba(arrColors[0]);
+        const c2 = toRgba(arrColors[1]);
+        const r = c1.r + (f * (c2.r - c1.r));
+        const g = c1.g + (f * (c2.g - c1.g));
+        const b = c1.b + (f * (c2.b - c1.b));
+        return {r:r, g:g, b:b, a:1};
+    }
     else
     {
+        const n = arrColors.length - 1;
         const fSize = 1 / n;
         let ratio = 0;
         for (let i = 0; i < n; i++)
@@ -386,11 +353,11 @@ const getColorAt = function(arrColors, f)
             {
                 const c1 = arrColors[i], c2 = arrColors[i+1];
                 const adjustedF = (f - r1) / (r2 - r1);
-                return getInterpolatedColor(c1, c2, adjustedF);
+                return getColorAt([c1, c2], adjustedF);
             }
             ratio += parseFloat(fSize);
         }
     }
 };
 
-export {isCssColor, toRgba, toRgbaString, toHex, toHsv, getInterpolatedColor, getRandomColor, getColorAt};
+export {isCssColor, toRgba, toRgbaString, toHex, toHsva, getRandomColor, getColorAt};
