@@ -35,45 +35,57 @@ const getHillshade = (dy, dx, altitudeDeg = 45, azimuthDeg = 315) =>
 	const slopeRad = getSlope(dy, dx);
 	let hillshade = 255 * ((Math.cos(zenithRad) * Math.cos(slopeRad)) + (Math.sin(zenithRad) * Math.sin(slopeRad) * Math.cos(azimuthRad - aspectRad)));
 	if (hillshade < 0) hillshade = 0;
-	return hillshade;
+	return Math.round(hillshade);
 };
 
 const slope = raster =>
 { 
-	const outRaster = raster.clone();
+	const outRaster = raster.cloneEmpty();
     for (let cell of raster.cells)
     {
     	const matrix = raster.get3x3MatrixAt(cell.col, cell.row);
-    	const change = getRateOfChange(matrix, raster.xRes, raster.yRes);
-		const slopeRad = getSlope(change.y, change.x);
-		outRaster.setValueAt(cell.col, cell.row, slopeRad);
+    	if (matrix !== undefined)
+    	{
+	    	const change = getRateOfChange(matrix, raster.xRes, raster.yRes);
+			const slopeRad = getSlope(change.y, change.x);
+			outRaster.setValueAt(cell.col, cell.row, slopeRad);
+    	}
     }
+    outRaster.trim();
     return outRaster;
 };
 
 const aspect = raster =>
 { 
-	const outRaster = raster.clone();
+	const outRaster = raster.cloneEmpty();
     for (let cell of raster.cells)
     {
     	const matrix = raster.get3x3MatrixAt(cell.col, cell.row);
-    	const change = getRateOfChange(matrix, raster.xRes, raster.yRes);
-		const aspectRad = getAspect(change.y, change.x);
-		outRaster.setValueAt(cell.col, cell.row, aspectRad);
+    	if (matrix !== undefined)
+    	{
+	    	const change = getRateOfChange(matrix, raster.xRes, raster.yRes);
+			const aspectRad = getAspect(change.y, change.x);
+			outRaster.setValueAt(cell.col, cell.row, aspectRad);
+		}
     }
+    outRaster.trim();
     return outRaster;
 };
 
 const hillshade = (raster, altitudeDeg = 45, azimuthDeg = 315) =>
 {  
-	const outRaster = raster.clone();
+	const outRaster = raster.cloneEmpty();
     for (let cell of raster.cells)
     {
     	const matrix = raster.get3x3MatrixAt(cell.col, cell.row);
-    	const change = getRateOfChange(matrix, raster.xRes, raster.yRes);
-		const shade = getHillshade(change.y, change.x, altitudeDeg, azimuthDeg);
-		outRaster.setValueAt(cell.col, cell.row, shade);
+    	if (matrix !== undefined)
+    	{
+	    	const change = getRateOfChange(matrix, raster.xRes, raster.yRes);
+			const shade = getHillshade(change.y, change.x, altitudeDeg, azimuthDeg);
+			outRaster.setValueAt(cell.col, cell.row, shade);
+		}
     }
+    outRaster.trim();
     return outRaster;
 };
 

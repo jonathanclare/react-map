@@ -64,12 +64,15 @@ export default class ElevationService
     }
     getRasterForElevationResults(gBounds, projection, results) 
     {
+        const mercator = new GoogleMercator();
+
         // Train kriging model.
         const arrX = [], arrY = [], arrZ = [];
         for (const o of results)
         { 
-            arrX.push(o.location.lng());
-            arrY.push(o.location.lat());
+            const m = mercator.toMetres(o.location.lat(), o.location.lng());
+            arrX.push(m.x);
+            arrY.push(m.y);
             arrZ.push(o.elevation);
         }
         const model = "spherical", sigma2 = 0, alpha = 100;
@@ -78,20 +81,22 @@ export default class ElevationService
         // Map Coords.
         let sw = gBounds.getSouthWest();
         let ne = gBounds.getNorthEast();
-        let n  = ne.lat();   
-        let e  = ne.lng();
-        let s  = sw.lat();   
-        let w  = sw.lng();
-        let realWidth  = Math.abs(e - w);
-        let realHeight  = Math.abs(n - s);
 
         // Pixel Coords.
         const psw = projection.fromLatLngToDivPixel(sw);
         const pne = projection.fromLatLngToDivPixel(ne);
         const nCols = (pne.x - psw.x);
         const nRows = (psw.y - pne.y);
-        let xRes = realWidth / nCols;
-        let yRes = realHeight / nRows;
+
+        // Use metres for raster definition.
+        sw = mercator.toMetres(sw.lat(), sw.lng());
+        ne = mercator.toMetres(ne.lat(), ne.lng());
+        const n  = ne.y;   
+        const e  = ne.x;
+        const s  = sw.y;   
+        const w  = sw.x;
+        const xRes = Math.abs(e - w) / nCols;
+        const yRes = Math.abs(n - s) / nRows;
 
         // Kriging.
         const values = [];
@@ -107,17 +112,6 @@ export default class ElevationService
             yNew -= yRes;
             xNew = w;
         }
-
-        // Use metres for raster definition.
-        const mercator = new GoogleMercator();
-        sw = mercator.toMetres(sw.lat(), sw.lng());
-        ne = mercator.toMetres(ne.lat(), ne.lng());
-        n  = ne.y;   
-        e  = ne.x;
-        s  = sw.y;   
-        w  = sw.x;
-        xRes = Math.abs(e - w) / nCols;
-        yRes = Math.abs(n - s) / nRows;
 
         return new Raster({nRows:nRows, nCols:nCols, west:w, south:s, xRes:xRes, yRes:yRes, values:values});
     }

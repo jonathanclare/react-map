@@ -23,7 +23,7 @@ test('slope to be close to 1.26511', () =>
 	expect(RasterAlgebra.getSlope(change.y, change.x)).toBeCloseTo(1.26511);
 });
 
-test('hillshade to be close to 154.02865', () => 
+test('hillshade to equal 154', () => 
 {
-	expect(RasterAlgebra.getHillshade(change.y, change.x, altitude, azimuth)).toBeCloseTo(154.02865);
+	expect(RasterAlgebra.getHillshade(change.y, change.x, altitude, azimuth)).toEqual(154);
 });
