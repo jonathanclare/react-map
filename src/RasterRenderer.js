@@ -1,4 +1,3 @@
-import * as Color from './Color' ;
 export default class RasterRenderer
 {
     constructor(raster) 
@@ -7,7 +6,7 @@ export default class RasterRenderer
         this.canvas = document.createElement('canvas');
         this.context = this.canvas.getContext('2d');
     }
-    getImageDataUrl(colorRamp, minValue, maxValue, opacity = 1) 
+    getDataUrl(colorTable, opacity = 1) 
     {
         return new Promise((resolve, reject) => 
         {
@@ -17,8 +16,7 @@ export default class RasterRenderer
             let index = 0;
             for (let cell of this.raster.cells)
             {
-                const f = (cell.value - minValue) / (maxValue - minValue);
-                const c = Color.getColorAt(colorRamp, f);
+                const c = colorTable.getColorForValue(cell.value);
                 imgData.data[index] = c.r; 
                 imgData.data[index+1] = c.g;  
                 imgData.data[index+2] = c.b;  

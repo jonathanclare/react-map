@@ -1,7 +1,7 @@
 import RasterIterator from './RasterIterator';
 export default class Raster 
 {
-    constructor({nRows, nCols, west, south, xRes, yRes, noDataValue, values = [], raster} = {}) 
+    constructor({nRows, nCols, west, south, xRes, yRes, noDataValue = null, values = [], raster} = {}) 
     {
         if (raster !== undefined)
         {
@@ -71,7 +71,6 @@ export default class Raster
                     }
                 }
             }
-
             this.cells =  new RasterIterator(this.rast);
         }
     }

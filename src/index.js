@@ -1,16 +1,13 @@
 /* global google */
-import React from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
-import App from './App';
+//import React from 'react';
+//import ReactDOM from 'react-dom';
+//import './index.css';
+//import App from './App';
 import GoogleMapsLoader from './GoogleMapsLoader';
-import RasterOverlay from './RasterOverlay';
-import * as RasterAlgebra from './RasterAlgebra';
 import RectangleControl  from './RectangleControl'; 
 import RasterRenderer  from './RasterRenderer'; 
-import ElevationService  from './ElevationService'; 
-import * as Color from './Color' ;
-import {isNumber} from './utils' ;
+import Krig from './Krig'; 
+import ColorTable  from './ColorTable';
 import registerServiceWorker from './registerServiceWorker';
 
 const g = new GoogleMapsLoader({key: 'AIzaSyABGvJPIPG0O1qsBjVbFYpx4bp_ShWpM98', libraries: ['drawing']});
@@ -31,8 +28,7 @@ g.load().then(() =>
     });
 
     // Overlay to draw raster onto.
-    const overlay = new RasterOverlay(map);
-    const elevator = new ElevationService();
+    const krig = new Krig(map);
 
     const rectCtrl = new RectangleControl(
     {
@@ -52,15 +48,14 @@ g.load().then(() =>
 
     const generateRaster = gBounds =>
     {
-        overlay.setBounds(gBounds);
-        elevator.getRasterForBounds(gBounds, overlay.overlay.getProjection())
+        krig.getRasterForBounds(gBounds, map)
         .then((raster) => 
         {
-            //drawRaster(raster, overlay, ['#5d8a41', '#e9d59c', '#fcc46d', '#baa191', '#f0ece9'], raster.min, raster.max);
-            addImageOverlay(map, raster, gBounds, ['#5d8a41', '#e9d59c', '#fcc46d', '#baa191', '#f0ece9'], raster.min, raster.max)
-            const hillshadeRast = RasterAlgebra.hillshade(raster);
-            //addImageOverlay(map, hillshadeRast, gBounds,  ['#000000', '#ffffff'], 0, 255)
-            //drawRaster(hillshadeRast, overlay, ['#000000', '#ffffff'], 0, 255);
+            const colorTable = new ColorTable();
+            colorTable.addColorRule(['#5d8a41', '#e9d59c', '#fcc46d', '#baa191', '#f0ece9'], raster.min, raster.max);
+            addGroundOverlay(map, raster, gBounds, colorTable)
+            //const hillshadeRast = RasterAlgebra.hillshade(raster);
+            //addGroundOverlay(map, hillshadeRast, gBounds, new ColorTable([{colors:['#000000', '#ffffff'],  min:0, max:255}]));
         })
         .catch((err) => 
         {
@@ -69,36 +64,18 @@ g.load().then(() =>
     };
 });
 
-const addImageOverlay = (map, raster, gBounds, colorRamp, minValue, maxValue) =>
+const addGroundOverlay = (map, raster, gBounds, colorTable) =>
 {
     const renderer = new RasterRenderer(raster);
-    const img = renderer.getImageDataUrl(colorRamp, minValue, maxValue)
-    .then((img) =>
+    renderer.getDataUrl(colorTable).then((dataUrl) =>
     {
-        const overlay = new google.maps.GroundOverlay(img, gBounds);
+        const overlay = new google.maps.GroundOverlay(dataUrl, gBounds);
         overlay.setMap(map);
     })
     .catch((err) => 
     {
         console.log('error: ', err);
     });
-}
-
-const drawRaster = (raster, overlay, colorRamp, minValue, maxValue) =>
-{
-    const imgData = overlay.context.createImageData(raster.nCols, raster.nRows);
-    let index = 0;
-    for (let cell of raster.cells)
-    {
-        const f = (cell.value - minValue) / (maxValue - minValue);
-        const c = Color.getColorAt(colorRamp, f);
-        imgData.data[index] = c.r; 
-        imgData.data[index+1] = c.g;  
-        imgData.data[index+2] = c.b;  
-        imgData.data[index+3] = 1 * 255; 
-        index += 4;
-    }
-    overlay.context.putImageData(imgData, 0, 0);
 }
 
 //ReactDOM.render(<App />, document.getElementById('root'));
