@@ -1,4 +1,4 @@
-import {getColorAt} from './Color' ;
+import {interpolateColor, toRgba} from './Color' ;
 export default class ColorTable
 {
     constructor(arrColorRules = []) 
@@ -14,13 +14,10 @@ export default class ColorTable
         let cr;
         for (let [index, colorRule] of this.arrColorRules.entries())
         {
-            if (index === 0)
+            if ((index === 0) && (value >= colorRule.min) && (value <= colorRule.max))
             {
-                if ((value >= colorRule.min) && (value <= colorRule.max))
-                {
-                    cr = colorRule;
-                    break;
-                }
+                cr = colorRule;
+                break;
             }
             else if ((value > colorRule.min) && (value <= colorRule.max))
             {
@@ -31,9 +28,23 @@ export default class ColorTable
         if (cr !== undefined)
         {
             const f = (value - cr.min) / (cr.max - cr.min);
-            const c = getColorAt(cr.colors, f);
+            const c = getColorAtPosition(cr, f);
             return c;
         }
         return null;
     }
-}
+};
+
+const getColorAtPosition = (colorRule, f) =>
+{
+    if (colorRule.colors.length === 1) return toRgba(colorRule.colors[0]);
+    else if (colorRule.colors.length === 2) return interpolateColor(colorRule.colors[0], colorRule.colors[1], f);
+    else
+    {
+        const fSize = 1 / (colorRule.colors.length - 1);
+        const lowerIndex = Math.floor(f / fSize);
+        const upperIndex = lowerIndex + 1;
+        const f2 = (f % fSize) / ((fSize * upperIndex) - (fSize * lowerIndex));
+        return interpolateColor(colorRule.colors[lowerIndex], colorRule.colors[upperIndex], f2);
+    }
+};  

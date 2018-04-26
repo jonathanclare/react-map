@@ -44,16 +44,6 @@ const colorNames =
 const isRgb = c =>  (c.indexOf('rgb') !== -1);
 
 /** 
- * Check if c is a valid rgba color.
- *
- * @since 0.1.0
- * @param {string} c The rgb(a) color string 'rgba(255, 255, 255, 1)'.
- * @return {boolean} true, if c is an rgba color, otherwise false.
- */
-const isRgba = c => (c.indexOf('rgba') !== -1);
-
-
-/** 
  * Check if c is a valid hex color.
  *
  * @since 0.1.0
@@ -188,13 +178,13 @@ const rgbaStringToRgba = rgba =>
  * @param {string} hex The hexadecimal value.
  * @return {object} An object containing the rgb color values {r:255, g:255, b:255}.
  */
-const hexToRgb = hex =>
+const hexToRgba = hex =>
 {
     // Expand shorthand form (e.g. '03F') to full form (e.g. '0033FF')
     const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
     hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {r : parseInt(result[1], 16),  g : parseInt(result[2], 16), b : parseInt(result[3], 16)} : null;
+    return result ? {r : parseInt(result[1], 16),  g : parseInt(result[2], 16), b : parseInt(result[3], 16), a:1} : null;
 };
 
 /**
@@ -230,6 +220,7 @@ const hsvaToRgba = (h, s, v, a = 1) =>
         case 3: r = p; g = q; b = val; break;
         case 4: r = t; g = p; b = val; break;
         case 5: r = val; g = p; b = q; break;
+        default:
     }
     
     return {r:r, g:g, b:b, a:a};
@@ -245,7 +236,7 @@ const hsvaToRgba = (h, s, v, a = 1) =>
 const colorNameToRgb = c => 
 {
     const hex = colorNames[c.toLowerCase()];;
-    const rgb = hexToRgb(hex);
+    const rgb = hexToRgba(hex);
     return rgb;
 };
 
@@ -260,7 +251,7 @@ const toRgba = c =>
 {
     if (isRgbObject(c)) return c; 
     else if (isRgb(c)) return rgbaStringToRgba(c); 
-    else if (isHex(c)) return hexToRgb(c);
+    else if (isHex(c)) return hexToRgba(c);
     else if (isColorName(c)) return colorNameToRgb(c);
     else if (isHsvObject(c)) return hsvaToRgba(c.h, c.s, c.v, c.a);
     return {r:0, g:0, b:0, a:1};
@@ -311,7 +302,7 @@ const toHsva = c =>
  * @since 0.1.0
  * @return {object} An object containing the rgba color values {r:255, g:255, b:255, a:1}.
  */
-const getRandomColor = () =>
+const randomColor = () =>
 {
     const r = Math.round(Math.random() * 255);
     const g = Math.round(Math.random() * 255);
@@ -327,37 +318,19 @@ const getRandomColor = () =>
  * @param {Number} f A fraction between 0 and 1 controlling the interpolation.
  * @return {object} An object containing the rgba color values {r:255, g:255, b:255, a:1}.
  */
-const getColorAt = function(arrColors, f)
+const interpolateColor = function(color1, color2, f)
 {
-    if (f <= 0) return toRgba(arrColors[0]);
-    else if (f >= 1) return toRgba(arrColors[arrColors.length-1]);
-    else if (arrColors.length === 1) return toRgba(arrColors[0]);
-    else if (arrColors.length === 2)
+    if (f <= 0) return toRgba(color1);
+    else if (f >= 1) return toRgba(color2);
+    else
     {
-        const c1 = toRgba(arrColors[0]);
-        const c2 = toRgba(arrColors[1]);
+        const c1 = toRgba(color1);
+        const c2 = toRgba(color2);
         const r = c1.r + (f * (c2.r - c1.r));
         const g = c1.g + (f * (c2.g - c1.g));
         const b = c1.b + (f * (c2.b - c1.b));
         return {r:r, g:g, b:b, a:1};
     }
-    else
-    {
-        const n = arrColors.length - 1;
-        const fSize = 1 / n;
-        let ratio = 0;
-        for (let i = 0; i < n; i++)
-        {
-            const r1 = ratio, r2 = r1 + fSize;
-            if ((f >= r1) && (f <= r2))
-            {
-                const c1 = arrColors[i], c2 = arrColors[i+1];
-                const adjustedF = (f - r1) / (r2 - r1);
-                return getColorAt([c1, c2], adjustedF);
-            }
-            ratio += parseFloat(fSize);
-        }
-    }
 };
 
-export {isCssColor, toRgba, toRgbaString, toHex, toHsva, getRandomColor, getColorAt};
+export {isCssColor, toRgba, toRgbaString, toHex, toHsva, randomColor, interpolateColor};
