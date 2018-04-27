@@ -1,4 +1,4 @@
-import {interpolateColor, toRgba} from './Color' ;
+import Color, {interpolateColor} from './Color' ;
 export default class ColorTable
 {
     constructor(arrColorRules = []) 
@@ -37,7 +37,7 @@ export default class ColorTable
 
 const getColorAtPosition = (colorRule, f) =>
 {
-    if (colorRule.colors.length === 1) return toRgba(colorRule.colors[0]);
+    if (colorRule.colors.length === 1) return new Color(colorRule.colors[0]);
     else if (colorRule.colors.length === 2) return interpolateColor(colorRule.colors[0], colorRule.colors[1], f);
     else
     {

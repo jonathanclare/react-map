@@ -107,7 +107,6 @@ export default class Color
     }
 };
 
-
 // List of valid color names.
 const colorNames = 
 {
