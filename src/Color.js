@@ -62,6 +62,7 @@ export default class Color
                 case r: h = (g - b) / d + (g < b ? 6 : 0); break;
                 case g: h = (b - r) / d + 2; break;
                 case b: h = (r - g) / d + 4; break;
+                default:
             }
             h /= 6;
         }
@@ -306,7 +307,7 @@ const hslaToRgba = (h, s, l, a = 1) =>
     l /= 100;
     let r, g, b;
 
-    if (s == 0) r = g = b = l; // achromatic
+    if (s === 0) r = g = b = l; // achromatic
     else
     {
         var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
