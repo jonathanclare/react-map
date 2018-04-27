@@ -1,9 +1,112 @@
-/**
- * @fileoverview    Contains color functions.
- * @author          Jonathan Clare 
- * @copyright       Jonathan Clare 2018
- * @module          Color 
- */
+export default class Color
+{
+    constructor({r, g, b, h, s, l, v, a = 1} = {}) 
+    {
+        let args = arguments[0];
+        let c;
+        if (typeof args === 'object') // object: rgba, hsla, hsva.
+        {
+            if (r !== undefined && g !== undefined && b !== undefined) // rgb object.
+                c = {r:r, g:g, b:b, a:a};
+            else if (h !== undefined && s !== undefined && l !== undefined) // hsl object.
+                c = hslaToRgba(h, s, l, a);
+            else if (h !== undefined && s !== undefined && v !== undefined) // hsv object.
+                c = hsvaToRgba(h, s, v, a);
+        }
+        else if (typeof args === 'string') // css string.
+        {  
+            switch(getColorType(args))
+            {
+                case 'rgb': 
+                    c = rgbaStringToRgba(args); 
+                    break;
+                case 'hsl': 
+                    const hsla = hslaStringToHsla(args);
+                    c = hslaToRgba(hsla.h, hsla.s, hsla.l, hsla.a);
+                    break;
+                case 'hsv': 
+                    const hsva = hsvaStringToHsva(args);
+                    c = hsvaToRgba(hsva.h, hsva.s, hsva.v, hsva.a);
+                    break;
+                case 'hex': 
+                    c = hexToRgba(args);
+                    break;
+                case 'colorname': 
+                    c = colorNameToRgba(args);
+                    break;
+                default:
+                    c = {r:0, g:0, b:0, a:0};
+            }
+
+        }
+        this.r = c.r;
+        this.g = c.g;
+        this.b = c.b;
+        this.a = c.a;
+    }
+    hsla() 
+    {  
+        const r = this.r / 255;
+        const g = this.g / 255;
+        const b = this.b / 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+
+        if (max === min) h = s = 0; // achromatic
+        else
+        {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch(max)
+            {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+
+        return {h:Math.round(360*h), s:Math.round(s*100), l:Math.round(l*100), a:this.a};
+    }
+    hsva() 
+    {
+        const max = Math.max(this.r, this.g, this.b);
+        const min = Math.min(this.r, this.g, this.b);
+
+        let h;
+        if (max === min) h = 0;
+        else if (max === this.r) h = ( 60 * (this.g - this.b) / (max - min) + 360 ) % 360;
+        else if (max === this.g) h = 60 * (this.b - this.r) / (max - min) + 120;
+        else if (max === this.b) h = 60 * (this.r - this.g) / (max - min) + 240;
+
+        let s;
+        if (max === 0) s = 0;
+        else s = (1 - min / max) * 100;
+
+        let v = (max / 255) * 100;
+
+        return {h:Math.round(h), s:Math.round(s), v:Math.round(v), a:this.a};
+    }
+    hex() 
+    {
+        return '#' + ((1 << 24) + (this.r << 16) + (this.g << 8) + this.b).toString(16).slice(1);
+    }
+    rgbaString() 
+    {
+        return 'rgba('+Math.floor(this.r)+','+Math.floor(this.g)+','+Math.floor(this.b)+','+this.a+')';
+    }
+    hslaString() 
+    {
+        const o = this.hsla();
+        return 'hsla('+Math.floor(o.h)+','+Math.floor(o.s)+','+Math.floor(o.l)+','+o.a+')';
+    }
+    hsvaString() 
+    {
+        const o = this.hsva();
+        return 'hsva('+Math.floor(o.h)+','+Math.floor(o.s)+','+Math.floor(o.v)+','+o.a+')';
+    }
+};
+
 
 // List of valid color names.
 const colorNames = 
@@ -34,17 +137,44 @@ const colorNames =
     'yellow':'#ffff00','yellowgreen':'#9acd32'
 };
 
+const getColorType = c => 
+{
+    if (isRgbString(c)) return 'rgb';
+    else if (isHslString(c)) return 'hsl';
+    else if (isHsvString(c)) return 'hsv';
+    else if (isHex(c)) return 'hex';     
+    else if (isColorName(c)) return 'colorname'; 
+}
+
 /** 
- * Check if c is a valid rgb color.
+ * Check if c is a valid rgb css string.
  *
  * @since 0.1.0
  * @param {string} c The rgb color string 'rgb(255, 255, 255)'.
  * @return {boolean} true, if c is an rgb color, otherwise false.
  */
-const isRgb = c =>  (c.indexOf('rgb') !== -1);
+const isRgbString = c => (c.indexOf('rgb') !== -1);
 
 /** 
- * Check if c is a valid hex color.
+ * Check if c is a valid hsl css string.
+ *
+ * @since 0.1.0
+ * @param {string} c The hsl color string 'hsl(255, 255, 255)'.
+ * @return {boolean} true, if c is an hsl color, otherwise false.
+ */
+const isHslString = c => (c.indexOf('hsl') !== -1);
+
+/** 
+ * Check if c is a valid hsv css string.
+ *
+ * @since 0.1.0
+ * @param {string} c The hsv color string 'hsv(255, 255, 255)'.
+ * @return {boolean} true, if c is an hsv color, otherwise false.
+ */
+const isHsvString = c => (c.indexOf('hsv') !== -1);
+
+/** 
+ * Check if c is a valid hex css string.
  *
  * @since 0.1.0
  * @param {string} c The hexadecimal value.
@@ -66,99 +196,7 @@ const isColorName = c =>
 };
 
 /** 
- * Check if c is a valid color.
- *
- * @since 0.1.0
- * @param {string} c The color.
- * @return {boolean} true, if c is a valid css color, otherwise false.
- */
-const isCssColor = c =>
-{
-    if (isHex(c) || isRgb(c) || isColorName(c)) return true;
-    return false;
-};
-
-/** 
- * Check if c is a valid rgba object.
- *
- * @since 0.1.0
- * @param {object} c An object containing the component colors {r:255, g:255, b:255}.
- * @return {boolean} true, if c is an rgba object, otherwise false.
- */
-const isRgbObject = c => 
-{
-    if (c.hasOwnProperty('r') && c.hasOwnProperty('g') && c.hasOwnProperty('b')) return true; 
-    return false;
-};
-
-/** 
- * Check if c is a valid hsv color.
- *
- * @since 0.1.0
- * @param {string} c The color.
- * @return {boolean} true, if c is a hsv object, otherwise false.
- */
-const isHsvObject = c => 
-{
-    if (c.hasOwnProperty('h') && c.hasOwnProperty('s') && c.hasOwnProperty('v')) return true; 
-    return false;
-};
-
-/** 
- * Converts rgb to hex.
- *
- * @since 0.1.0
- * @param {number} r The red component.
- * @param {number} g The green component.
- * @param {number} b The blue component.
- * @param {number} a The alpha component.
- * @return {string} The rgb(a) color string 'rgba(255, 255, 255, 1)'.
- */
-const rgbaToRgbaString = (r, g, b, a = 1) => 'rgba('+Math.floor(r)+','+Math.floor(g)+','+Math.floor(b)+','+a+')'
-
-/** 
- * Converts rgb to hex.
- *
- * @since 0.1.0
- * @param {number} r The red component.
- * @param {number} g The green component.
- * @param {number} b The blue component.
- * @return {string} The hexadecimal value.
- */
-const rgbToHex = (r, g, b) => '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-
-/** 
- * Converts rgb to hsv.
- *
- * @since 0.1.0
- * @param {number} r The red component.
- * @param {number} g The green component.
- * @param {number} b The blue component.
- * @param {number} a The alpha component.
- * @return {object} An object containing the component colors {h:255, s:255, v:255, a:1}.
- */
-const rgbaToHsva = (r, g, b, a = 1) => 
-{
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-
-    let h;
-    if (max === min) h = 0;
-    else if (max === r) h = ( 60 * (g - b) / (max - min) + 360 ) % 360;
-    else if (max === g) h = 60 * (b - r) / (max - min) + 120;
-    else if (max === b) h = 60 * (r - g) / (max - min) + 240;
-
-    let s;
-    if ( max === 0 ) s = 0;
-    else s = (1 - min / max) * 100;
-
-    let v = (max / 255) * 100;
-
-    return {h:Math.round(h), s:Math.round(s), v:Math.round(v), a:a};
-}
-
-/** 
- * Get the components colors for an rgba color string.
+ * Get the components colors for an rgb(a) color string.
  *
  * @since 0.1.0
  * @param {string} rgba The rgb(a) color string 'rgba(255, 255, 255, 1)'.
@@ -167,8 +205,33 @@ const rgbaToHsva = (r, g, b, a = 1) =>
 const rgbaStringToRgba = rgba =>
 {
     const arr = rgba.match(/\d+/g);
-    const o = {r: Math.floor(arr[0]),  g: Math.floor(arr[1]), b: Math.floor(arr[2]), a: ((arr.length > 3) ? arr[3] : 1)};
-    return o;
+    return {r: Math.floor(arr[0]),  g: Math.floor(arr[1]), b: Math.floor(arr[2]), a: ((arr.length > 3) ? parseFloat(arr[3]) : 1)};
+};
+
+/** 
+ * Get the components values for an hsl(a) color string.
+ *
+ * @since 0.1.0
+ * @param {string} hsla The hsl(a) color string 'hsla(255, 255, 255, 1)'.
+ * @return {object} An object containing the component values {h:255, s:255, l:255, a:1}.
+ */
+const hslaStringToHsla = hsla =>
+{
+    const arr = hsla.match(/\d+/g);
+    return {h: Math.floor(arr[0]),  s: Math.floor(arr[1]), l: Math.floor(arr[2]), a: ((arr.length > 3) ? parseFloat(arr[3]) : 1)};
+};
+
+/** 
+ * Get the components values for an hsv(a) color string.
+ *
+ * @since 0.1.0
+ * @param {string} hsva The hsv(a) color string 'hsva(255, 255, 255, 1)'.
+ * @return {object} An object containing the component values {h:255, s:255, l:255, a:1}.
+ */
+const hsvaStringToHsva = hsva =>
+{
+    const arr = hsva.match(/\d+/g);
+    return {h: Math.floor(arr[0]),  s: Math.floor(arr[1]), v: Math.floor(arr[2]), a: ((arr.length > 3) ? parseFloat(arr[3]) : 1)};
 };
 
 /** 
@@ -223,7 +286,47 @@ const hsvaToRgba = (h, s, v, a = 1) =>
         default:
     }
     
-    return {r:r, g:g, b:b, a:a};
+    return {r:Math.round(r), g:Math.round(g), b:Math.round(b), a:a};
+};
+
+/**
+ * Converts an HSL color value to RGB. Conversion formula
+ * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+ * Assumes h, s, and l are contained in the set [0, 1] and
+ * returns r, g, and b in the set [0, 255].
+ *
+ * @param   {number}  h       The hue
+ * @param   {number}  s       The saturation
+ * @param   {number}  l       The lightness
+ * @return  {Array}           The RGB representation
+ */
+const hslaToRgba = (h, s, l, a = 1) =>
+{
+    h /= 360;
+    s /= 100;
+    l /= 100;
+    let r, g, b;
+
+    if (s == 0) r = g = b = l; // achromatic
+    else
+    {
+        var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        var p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+    }
+    
+    return {r:Math.round(r * 255), g:Math.round(g * 255), b:Math.round(b * 255), a:a};
+}
+const hue2rgb = (p, q, t) =>
+{
+    if(t < 0) t += 1;
+    if(t > 1) t -= 1;
+    if(t < 1/6) return p + (q - p) * 6 * t;
+    if(t < 1/2) return q;
+    if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
 };
 
 /** 
@@ -233,67 +336,11 @@ const hsvaToRgba = (h, s, v, a = 1) =>
  * @param {string} c The color name.
  * @return {object} An object containing the component colors {r:255, g:255, b:255}.
  */
-const colorNameToRgb = c => 
+const colorNameToRgba = c => 
 {
-    const hex = colorNames[c.toLowerCase()];;
+    const hex = colorNames[c.toLowerCase()];
     const rgb = hexToRgba(hex);
     return rgb;
-};
-
-/**
- * Converts the color to rgb.
- * 
- * @since 0.1.0
- * @param {string} c The color.
- * @return {object} An object containing the rgba color values {r:255, g:255, b:255, a:1}.
- */
-const toRgba = c => 
-{
-    if (isRgbObject(c)) return c; 
-    else if (isRgb(c)) return rgbaStringToRgba(c); 
-    else if (isHex(c)) return hexToRgba(c);
-    else if (isColorName(c)) return colorNameToRgb(c);
-    else if (isHsvObject(c)) return hsvaToRgba(c.h, c.s, c.v, c.a);
-    return {r:0, g:0, b:0, a:1};
-};
-
-/**
- * Converts a color to an rgba string.
- *
- * @since 0.1.0
- * @param {string} c The color.
- * @return {string} An rgba color string 'rgba(255, 255, 255, 1)'.
- */
-const toRgbaString = c =>
-{
-    const o = toRgba(c);
-    return rgbaToRgbaString(o.r, o.g, o.b);
-};
-
-/**
- * Converts a color to an hex string.
- *
- * @since 0.1.0
- * @param {string} c The color.
- * @return {string} The hexadecimal value.
- */
-const toHex = c =>
-{
-    const o = toRgba(c);
-    return rgbToHex(o.r, o.g, o.b);
-};
-
-/**
- * Returns a color value with the given hue, saturation, value components.
- * 
- * @since 0.1.0
- * @param {string} c The color.
- * @return {object} An object containing the component colors {h:255, s:255, v:255, a:1}.
- */
-const toHsva = c =>
-{
-    const o = toRgba(c);
-    return rgbaToHsva(o.r, o.g, o.b);
 };
 
 /** 
@@ -304,10 +351,7 @@ const toHsva = c =>
  */
 const randomColor = () =>
 {
-    const r = Math.round(Math.random() * 255);
-    const g = Math.round(Math.random() * 255);
-    const b = Math.round(Math.random() * 255);
-    return {r:r, g:g, b:b, a:1};
+    return new Color({r:Math.round(Math.random() * 255), g:Math.round(Math.random() * 255), b:Math.round(Math.random() * 255), a:1});
 };
 
 /** 
@@ -320,17 +364,17 @@ const randomColor = () =>
  */
 const interpolateColor = function(color1, color2, f)
 {
-    if (f <= 0) return toRgba(color1);
-    else if (f >= 1) return toRgba(color2);
+    if (f <= 0) return new Color(color1);
+    else if (f >= 1) return new Color(color2);
     else
     {
-        const c1 = toRgba(color1);
-        const c2 = toRgba(color2);
+        const c1 = new Color(color1);
+        const c2 = new Color(color2);
         const r = c1.r + (f * (c2.r - c1.r));
         const g = c1.g + (f * (c2.g - c1.g));
         const b = c1.b + (f * (c2.b - c1.b));
-        return {r:r, g:g, b:b, a:1};
+        return new Color({r:r, g:g, b:b, a:1});
     }
 };
 
-export {isCssColor, toRgba, toRgbaString, toHex, toHsva, randomColor, interpolateColor};
+export {randomColor, interpolateColor};
