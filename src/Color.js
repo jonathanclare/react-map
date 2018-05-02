@@ -2,110 +2,18 @@ export default class Color
 {
     constructor({r, g, b, h, s, l, v, a = 1} = {}) 
     {
-        let args = arguments[0];
-        let c;
-        if (typeof args === 'object') // object: rgba, hsla, hsva.
-        {
-            if (r !== undefined && g !== undefined && b !== undefined) // rgb object.
-                c = {r:r, g:g, b:b, a:a};
-            else if (h !== undefined && s !== undefined && l !== undefined) // hsl object.
-                c = hslaToRgba(h, s, l, a);
-            else if (h !== undefined && s !== undefined && v !== undefined) // hsv object.
-                c = hsvaToRgba(h, s, v, a);
-        }
-        else if (typeof args === 'string') // css string.
-        {  
-            switch(getColorType(args))
-            {
-                case 'rgb': 
-                    c = rgbaStringToRgba(args); 
-                    break;
-                case 'hsl': 
-                    const hsla = hslaStringToHsla(args);
-                    c = hslaToRgba(hsla.h, hsla.s, hsla.l, hsla.a);
-                    break;
-                case 'hsv': 
-                    const hsva = hsvaStringToHsva(args);
-                    c = hsvaToRgba(hsva.h, hsva.s, hsva.v, hsva.a);
-                    break;
-                case 'hex': 
-                    c = hexToRgba(args);
-                    break;
-                case 'colorname': 
-                    c = colorNameToRgba(args);
-                    break;
-                default:
-                    c = {r:0, g:0, b:0, a:0};
-            }
-
-        }
+        const c = getRgba(arguments[0]);
         this.r = c.r;
         this.g = c.g;
         this.b = c.b;
         this.a = c.a;
     }
-    hsla() 
-    {  
-        const r = this.r / 255;
-        const g = this.g / 255;
-        const b = this.b / 255;
-        const max = Math.max(r, g, b), min = Math.min(r, g, b);
-        let h, s, l = (max + min) / 2;
-
-        if (max === min) h = s = 0; // achromatic
-        else
-        {
-            const d = max - min;
-            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-            switch(max)
-            {
-                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                case g: h = (b - r) / d + 2; break;
-                case b: h = (r - g) / d + 4; break;
-                default:
-            }
-            h /= 6;
-        }
-
-        return {h:Math.round(360*h), s:Math.round(s*100), l:Math.round(l*100), a:this.a};
-    }
-    hsva() 
-    {
-        const max = Math.max(this.r, this.g, this.b);
-        const min = Math.min(this.r, this.g, this.b);
-
-        let h;
-        if (max === min) h = 0;
-        else if (max === this.r) h = ( 60 * (this.g - this.b) / (max - min) + 360 ) % 360;
-        else if (max === this.g) h = 60 * (this.b - this.r) / (max - min) + 120;
-        else if (max === this.b) h = 60 * (this.r - this.g) / (max - min) + 240;
-
-        let s;
-        if (max === 0) s = 0;
-        else s = (1 - min / max) * 100;
-
-        let v = (max / 255) * 100;
-
-        return {h:Math.round(h), s:Math.round(s), v:Math.round(v), a:this.a};
-    }
-    hex() 
-    {
-        return '#' + ((1 << 24) + (this.r << 16) + (this.g << 8) + this.b).toString(16).slice(1);
-    }
-    rgbaString() 
-    {
-        return 'rgba('+Math.floor(this.r)+','+Math.floor(this.g)+','+Math.floor(this.b)+','+this.a+')';
-    }
-    hslaString() 
-    {
-        const o = this.hsla();
-        return 'hsla('+Math.floor(o.h)+','+Math.floor(o.s)+','+Math.floor(o.l)+','+o.a+')';
-    }
-    hsvaString() 
-    {
-        const o = this.hsva();
-        return 'hsva('+Math.floor(o.h)+','+Math.floor(o.s)+','+Math.floor(o.v)+','+o.a+')';
-    }
+    hsla() {return rgbaToHsla(this.r, this.g, this.b, this.a);}
+    hsva() {return rgbaToHsva(this.r, this.g, this.b, this.a);}
+    hex() {return rgbaToHex(this.r, this.g, this.b, this.a);}
+    rgbaString() {return rgbaToRgbaString(this.r, this.g, this.b, this.a);}
+    hslaString() {return rgbaToHslaString(this.r, this.g, this.b, this.a);}
+    hsvaString() {return rgbaToHsvaString(this.r, this.g, this.b, this.a);}
 };
 
 // List of valid color names.
@@ -342,6 +250,105 @@ const colorNameToRgba = c =>
     const rgb = hexToRgba(hex);
     return rgb;
 };
+
+// Were using the arguments object so cant use an arrow function here https://stackoverflow.com/a/34361380.
+const getRgba = function({r, g, b, h, s, l, v, a = 1} = {})
+{
+    let args = arguments[0];
+    let c;
+    if (typeof args === 'object') // object: rgba, hsla, hsva.
+    {
+        if (r !== undefined && g !== undefined && b !== undefined) // rgb object.
+            c = {r:r, g:g, b:b, a:a};
+        else if (h !== undefined && s !== undefined && l !== undefined) // hsl object.
+            c = hslaToRgba(h, s, l, a);
+        else if (h !== undefined && s !== undefined && v !== undefined) // hsv object.
+            c = hsvaToRgba(h, s, v, a);
+    }
+    else if (typeof args === 'string') // css string.
+    {  
+        switch(getColorType(args))
+        {
+            case 'rgb': 
+                c = rgbaStringToRgba(args); 
+                break;
+            case 'hsl': 
+                const hsla = hslaStringToHsla(args);
+                c = hslaToRgba(hsla.h, hsla.s, hsla.l, hsla.a);
+                break;
+            case 'hsv': 
+                const hsva = hsvaStringToHsva(args);
+                c = hsvaToRgba(hsva.h, hsva.s, hsva.v, hsva.a);
+                break;
+            case 'hex': 
+                c = hexToRgba(args);
+                break;
+            case 'colorname': 
+                c = colorNameToRgba(args);
+                break;
+            default:
+                c = {r:0, g:0, b:0, a:0};
+        }
+
+    }
+    return {r:c.r, g:c.g, b:c.b, a:c.a};
+};
+const rgbaToHsla = (r, g, b, a) =>  
+{  
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) h = s = 0; // achromatic
+    else
+    {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch(max)
+        {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+            default:
+        }
+        h /= 6;
+    }
+
+    return {h:Math.round(360*h), s:Math.round(s*100), l:Math.round(l*100), a:a};
+}
+const rgbaToHsva = (r, g, b, a) =>  
+{
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+
+    let h;
+    if (max === min) h = 0;
+    else if (max === r) h = ( 60 * (g - b) / (max - min) + 360 ) % 360;
+    else if (max === g) h = 60 * (b - r) / (max - min) + 120;
+    else if (max === b) h = 60 * (r - g) / (max - min) + 240;
+
+    let s;
+    if (max === 0) s = 0;
+    else s = (1 - min / max) * 100;
+
+    let v = (max / 255) * 100;
+
+    return {h:Math.round(h), s:Math.round(s), v:Math.round(v), a:a};
+}
+const rgbaToHex = (r, g, b, a) => '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+const rgbaToRgbaString = (r, g, b, a) => 'rgba('+Math.floor(r)+','+Math.floor(g)+','+Math.floor(b)+','+a+')';
+const rgbaToHslaString = (r, g, b, a) =>  
+{
+    const o = rgbaToHsla(r, g, b, a);
+    return 'hsla('+Math.floor(o.h)+','+Math.floor(o.s)+','+Math.floor(o.l)+','+o.a+')';
+}
+const rgbaToHsvaString = (r, g, b, a) =>  
+{
+    const o = rgbaToHsva(r, g, b, a);
+    return 'hsva('+Math.floor(o.h)+','+Math.floor(o.s)+','+Math.floor(o.v)+','+o.a+')';
+}
 
 /** 
  * Returns a randomly generated color.
